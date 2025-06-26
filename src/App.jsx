@@ -36,6 +36,23 @@ function TableCard({ tableId, data, isAdmin }) {
   const [waktu, setWaktu] = useState(""); 
   const [error, setError] = useState("");
   const seat = data?.seat || "";
+useEffect(() => {
+  if (reservedBy?.waktu) {
+    const waktuBooking = new Date(reservedBy.waktu);
+    const expireTime = waktuBooking.getTime() + 30 * 60 * 1000; // +30 menit
+    const now = new Date().getTime();
+
+    if (now > expireTime) {
+      // Sudah lewat 30 menit dari waktu reservasi
+      set(ref(database, `meja/${tableId}`), {
+        occupied: false,
+        reservedBy: null,
+        seat: seat || "4"
+      });
+      toast.success(`Meja ${tableId} dikosongkan otomatis (expired)`);
+    }
+  }
+}, [reservedBy, tableId, seat]);
 
 
   const toggleOccupancy = () => {
@@ -43,38 +60,47 @@ function TableCard({ tableId, data, isAdmin }) {
     set(ref(database, `meja/${tableId}/occupied`), newStatus);
   };
 
-  const handleReservation = () => {
-    if (!nama || !telp || !waktu) {
-      setError("Nama, Nomor Telepon, dan Waktu wajib diisi.");
-      return;
-    }
+ const handleReservation = () => {
+  if (!nama || !telp || !waktu) {
+    setError("Nama, Nomor Telepon, dan Waktu wajib diisi.");
+    return;
+  }
 
-    const selectedTime = new Date(waktu);
-    const now = new Date();
+  const selectedTime = new Date(waktu);
+  const now = new Date();
+  const threeHoursFromNow = new Date(now.getTime() + 3 * 60 * 60 * 1000);
 
-    // Tidak boleh booking jika waktu reservasi kurang dari 3 jam dari sekarang
-    const threeHoursFromNow = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-    if (selectedTime < threeHoursFromNow) {
-      toast.error("Reservasi harus dilakukan minimal 3 jam sebelum waktu yang dipilih.");
-      return ;
-    }
-    if (selectedTime <= now) {
-      toast.error("Waktu reservasi harus di masa depan.");
-      return;
-    }
+  if (selectedTime < threeHoursFromNow) {
+    toast.error("Reservasi harus dilakukan minimal 3 jam sebelum waktu yang dipilih.");
+    return;
+  }
+  if (selectedTime <= now) {
+    toast.error("Waktu reservasi harus di masa depan.");
+    return;
+  }
 
-  set(ref(database, `meja/${tableId}`), {
-  occupied: true,
-  seat: `4`,
-  reservedBy: { nama, telp, waktu },
-});
-    toast.success(`Reservasi atas nama ${nama} berhasil!`);
-    setFormVisible(false);
-    setNama("");
-    setTelp("");
-    setWaktu("");
-    setError("");
-  };
+  const reservedRef = ref(database, `meja/${tableId}/reservedBy`);
+  const mejaRef = ref(database, `meja/${tableId}`);
+
+  onValue(reservedRef, (snapshot) => {
+    if (snapshot.exists()) {
+      alert("Meja sudah dipesan!");
+    } else {
+      set(mejaRef, {
+        occupied: true,
+        seat: `4`,
+        reservedBy: { nama, telp, waktu },
+      });
+      toast.success(`Reservasi atas nama ${nama} berhasil!`);
+      setFormVisible(false);
+      setNama("");
+      setTelp("");
+      setWaktu("");
+      setError("");
+    }
+  }, { onlyOnce: true });
+};
+
 
   const cancelReservation = () => {
     Swal.fire({
@@ -114,8 +140,14 @@ function TableCard({ tableId, data, isAdmin }) {
         {(seat ? seat : 4) + " Kursi"}
       </div>
       <div className="text-sm mt-1">
-        {occupied ? "Terisi" : "Kosong"}
-      </div>
+  {occupied
+    ? "Terisi"
+    : reservedBy
+    ? "Dipesan"
+    : "Kosong"}
+</div>
+
+
       {reservedBy && (
         <div className="text-xs mt-1 text-center">
           <p><b>{reservedBy.nama}</b></p>
@@ -137,10 +169,9 @@ function TableCard({ tableId, data, isAdmin }) {
         <Button variant="destructive" className="mt-2 text-xs" onClick={cancelReservation}>Batalkan Reservasi</Button>
       )} */}
 
-      {!isAdmin && !occupied && !formVisible && (
-        <Button className="mt-2 text-xs" onClick={() => setFormVisible(true)}>Reservasi</Button>
-      )}
-
+      {!isAdmin && !occupied && !formVisible && !reservedBy && (
+  <Button className="mt-2 text-xs" onClick={() => setFormVisible(true)}>Reservasi</Button>
+)}
       {formVisible && (
         <div className="flex flex-col items-center mt-2 text-xs w-full">
           <input className="border p-1 text-xs mb-1 w-36" placeholder="Nama" value={nama} onChange={(e) => setNama(e.target.value)} />
@@ -154,6 +185,7 @@ function TableCard({ tableId, data, isAdmin }) {
     </Card>
   );
 }
+
 
 
 
