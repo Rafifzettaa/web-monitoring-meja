@@ -94,6 +94,18 @@ const handleTelpChange = (e) => {
 
   const reservedRef = ref(database, `meja/${tableId}/reservedBy`);
   const mejaRef = ref(database, `meja/${tableId}`);
+  const waktuDate = new Date(waktu); // pastikan `waktu` adalah ISO string
+const formattedWaktu = waktuDate.toLocaleString("id-ID", {
+  weekday: "long",      // Sabtu
+  year: "numeric",      // 2025
+  month: "long",        // Juni
+  day: "numeric",       // 29
+  hour: "2-digit",      // 22
+  minute: "2-digit",    // 49
+  hour12: false,        // 24 jam
+  timeZone: "Asia/Jakarta"
+});
+
 
   onValue(reservedRef, (snapshot) => {
     if (snapshot.exists()) {
@@ -104,7 +116,27 @@ const handleTelpChange = (e) => {
         seat: `4`,
         reservedBy: { nama, telp, waktu },
       });
-      toast.success(`Reservasi atas nama ${nama} berhasil!`);
+toast.success(
+  <div className="text-sm text-gray-800 leading-relaxed">
+    <p className="mb-1">
+      Reservasi atas nama <strong>{nama}</strong> berhasil!
+    </p>
+
+    <p className="mb-3">
+      Silakan datang sebelum <strong>{formattedWaktu} WIB</strong>.
+    </p>
+
+    <div className="flex items-start gap-2">
+      <span className="text-yellow-500 text-lg mt-0.5">⚠️</span>
+      <span className="text-yellow-700">
+        Jika Anda tidak tiba dalam waktu <strong>30 menit</strong> dari waktu kedatangan yang ditentukan,<br />
+        maka reservasi akan <strong>dibatalkan secara otomatis</strong>.
+      </span>
+    </div>
+  </div>
+);
+
+
       setFormVisible(false);
       setNama("");
       setTelp("");
