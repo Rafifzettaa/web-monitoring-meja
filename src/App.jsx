@@ -2,6 +2,7 @@
 // Dengan Firebase Auth login khusus Admin
 
 // Web app pemantauan & reservasi meja restoran (Admin & User) + waktu reservasi + validasi, alert & auto-reset
+import { Dialog } from "@headlessui/react";
 
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
@@ -27,7 +28,51 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const auth = getAuth(app);
-
+// Tambahkan di dalam component `App` atau bisa buat komponen sendiri di luar
+function ReservationReminderModal({ show, onClose }) {
+  return (
+    <Dialog open={show} onClose={() => {}} className="relative z-50">
+      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="bg-white max-w-md w-full rounded-xl shadow-xl p-6 space-y-4">
+          <Dialog.Title className="text-lg font-semibold flex items-center gap-2">
+            🕒 Pengingat Penting Sebelum Reservasi
+          </Dialog.Title>
+          <ul className="text-sm list-disc list-inside text-gray-700 space-y-2">
+            <li>
+              Reservasi hanya bisa dilakukan minimal <strong>3 jam</strong> sebelum waktu kedatangan. Sistem akan menolak jika kurang dari itu.
+            </li>
+            <li>
+              <strong>Harap datang tepat waktu.</strong> Jika terlambat lebih dari <strong>30 menit</strong>, reservasi akan <strong>dibatalkan otomatis</strong>.
+            </li>
+            <li>
+              Jika datang dalam batas 30 menit, reservasi tetap berlaku dan waktu duduk dimulai saat Anda tiba.
+            </li>
+            <li>
+              Setelah Anda meninggalkan meja, meja akan tersedia kembali untuk pelanggan lain.
+            </li>
+          </ul>
+          <div className="flex justify-between items-center">
+            <label className="flex items-center text-xs text-gray-500">
+              <input
+                type="checkbox"
+                className="mr-2"
+                onChange={(e) => localStorage.setItem('hideReminderToday', e.target.checked ? '1' : '0')}
+              />
+              Jangan tampilkan lagi hari ini
+            </label>
+            <button
+              onClick={onClose}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Saya Mengerti
+            </button>
+          </div>
+        </Dialog.Panel>
+      </div>
+    </Dialog>
+  );
+}
 function TableCard({ tableId, data, isAdmin }) {
   const { occupied, reservedBy } = data || {};
   const [formVisible, setFormVisible] = useState(false);
@@ -276,9 +321,24 @@ function AdminPanel({ onLogout }) {
   );
 }
 
+// Tambahkan ke dalam komponen <UserPanel />
 function UserPanel() {
+  const [showReminder, setShowReminder] = useState(false);
+
+  useEffect(() => {
+    const alreadyHidden = localStorage.getItem("hideReminderToday") === "1";
+    const lastShown = localStorage.getItem("reminderLastShown");
+    const today = new Date().toISOString().split("T")[0];
+
+    if (!alreadyHidden || lastShown !== today) {
+      setShowReminder(true);
+      localStorage.setItem("reminderLastShown", today);
+    }
+  }, []);
+
   return (
     <div className="p-4">
+      {showReminder && <ReservationReminderModal show={showReminder} onClose={() => setShowReminder(false)} />}
       <h2 className="text-xl font-bold mb-4">Reservasi Meja</h2>
       <TableDisplay isAdmin={false} />
     </div>
