@@ -54,6 +54,19 @@ useEffect(() => {
   }
 }, [reservedBy, tableId, seat]);
 
+// Handler saat input berubah
+const handleTelpChange = (e) => {
+  const value = e.target.value;
+
+  // Validasi hanya angka (atau kosong, agar tidak error saat menghapus input)
+  if (/^\d*$/.test(value)) {
+    setTelp(value);
+    setError("");
+  } else {
+    setError("Nomor telepon hanya boleh berisi angka.");
+  }
+};
+
 
   const toggleOccupancy = () => {
     const newStatus = !occupied;
@@ -175,8 +188,17 @@ useEffect(() => {
       {formVisible && (
         <div className="flex flex-col items-center mt-2 text-xs w-full">
           <input className="border p-1 text-xs mb-1 w-36" placeholder="Nama" value={nama} onChange={(e) => setNama(e.target.value)} />
-          <input className="border p-1 text-xs mb-1 w-36" placeholder="No. Telp" value={telp} onChange={(e) => setTelp(e.target.value)} />
-          <label className="text-[10px] mb-1 text-gray-500">Waktu Reservasi:</label>
+<input
+  className="border p-1 text-xs mb-1 w-36"
+  placeholder="No. Telp"
+  value={telp}
+  onChange={(e) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value)) {
+      setTelp(value);      // hanya set kalau isinya angka atau kosong
+    }
+  }}
+/>          <label className="text-[10px] mb-1 text-gray-500">Waktu Reservasi:</label>
           <input type="datetime-local" className="border p-1 text-xs mb-1 w-36" value={waktu} onChange={(e) => setWaktu(e.target.value)} />
           {error && <div className="text-red-500 text-xs mb-1">{error}</div>}
           <Button className="text-xs" onClick={handleReservation}>Simpan</Button>
